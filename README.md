@@ -1,6 +1,6 @@
-# Daedalus-Man: Cyberpunk Maze Game
+# Daedalus-Man: Maze Game
 
-A simple maze game with a cyberpunk aesthetic where the player navigates through a grid collecting pellets while avoiding walls.
+A simple maze game with a cyberpunk meets matrix aesthetic where the player navigates through a grid collecting pellets while avoiding walls.
 
 ## Overview
 
