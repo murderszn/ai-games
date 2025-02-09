@@ -33,7 +33,7 @@ We welcome contributions from developers and gamers alike! If you're interested 
 This project is licensed under the MIT License. See `LICENSE.txt` for details.
 
 ## Getting Started
-1. Clone this repository to your local machine using `git clone https://github.com/your-username/ai-arcade.git`.
+1. Clone this repository to your local machine using `git clone https://github.com/murderszn/ai-games.git`.
 2. Run `npm install` to install dependencies.
 3. Start the server by running `node server.js`.
 4. Open a web browser and navigate to `http://localhost:3000`.
