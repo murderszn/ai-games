@@ -1,0 +1,381 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cyber Pong</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Russo+One&display=swap');
+
+        :root {
+            --neon-blue: #00f3ff;
+            --neon-pink: #ff00ff;
+            --neon-green: #39ff14;
+            --game-bg: #1a1a1a;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: linear-gradient(135deg, #13001e, #000000);
+            color: white;
+            font-family: 'Russo One', sans-serif;
+        }
+
+        .game-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            position: relative;
+            background: radial-gradient(circle at center, transparent 0%, rgba(0,0,0,0.8) 100%);
+            padding: 2vh;
+            box-sizing: border-box;
+        }
+
+        .neon-text {
+            font-family: 'Press Start 2P', cursive;
+            text-shadow: 0 0 5px var(--neon-blue),
+                         0 0 10px var(--neon-blue),
+                         0 0 20px var(--neon-blue),
+                         0 0 40px var(--neon-blue);
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+
+        #game-info {
+            font-size: min(2.5em, 5vw);
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+        }
+
+        .score {
+            font-family: 'Press Start 2P', cursive;
+            font-size: min(1.5em, 4vw);
+            margin: 10px 0;
+            display: flex;
+            gap: 40px;
+        }
+
+        .score span {
+            color: var(--neon-pink);
+            text-shadow: 0 0 5px var(--neon-pink);
+        }
+
+        .game-container {
+            position: relative;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 20px;
+            box-shadow: 0 0 20px var(--neon-blue);
+            animation: float 6s ease-in-out infinite;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            max-height: 85vh;
+            padding: 2vh;
+        }
+
+        canvas {
+            border: 2px solid var(--neon-blue);
+            border-radius: 15px;
+            box-shadow: 0 0 15px var(--neon-blue);
+            transition: all 0.3s ease;
+            width: min(70vh, 80vw);
+            height: min(70vh, 80vw);
+            background: rgba(0, 0, 0, 0.5);
+        }
+
+        #restart-btn {
+            margin-top: 20px;
+            padding: min(15px, 2vh) min(30px, 3vw);
+            font-size: min(1.2em, 3vw);
+            font-family: 'Press Start 2P', cursive;
+            background: transparent;
+            color: var(--neon-green);
+            border: 2px solid var(--neon-green);
+            border-radius: 8px;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: all 0.3s ease;
+            text-shadow: 0 0 5px var(--neon-green);
+            box-shadow: 0 0 10px var(--neon-green);
+        }
+
+        #restart-btn:hover {
+            background: var(--neon-green);
+            color: black;
+            transform: scale(1.1);
+            box-shadow: 0 0 20px var(--neon-green);
+        }
+
+        .particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+        }
+    </style>
+</head>
+<body>
+    <div class="particles" id="particles"></div>
+    <div class="game-wrapper">
+        <div id="game-info" class="neon-text">Cyber Pong</div>
+        <div class="game-container">
+            <div class="score">
+                <div>Player: <span id="playerScore">0</span></div>
+                <div>AI: <span id="aiScore">0</span></div>
+            </div>
+            <canvas id="gameCanvas" width="800" height="600"></canvas>
+            <button id="restart-btn" onclick="resetGame()">Reset Game</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const playerScoreElement = document.getElementById('playerScore');
+        const aiScoreElement = document.getElementById('aiScore');
+
+        // Game objects
+        const ball = {
+            x: canvas.width / 2,
+            y: canvas.height / 2,
+            radius: 10,
+            speed: 7,
+            dx: 5,
+            dy: 5,
+            color: '#00f3ff'
+        };
+
+        const paddleHeight = 100;
+        const paddleWidth = 15;
+        const player = {
+            x: 0,
+            y: canvas.height / 2 - paddleHeight / 2,
+            width: paddleWidth,
+            height: paddleHeight,
+            color: '#ff00ff',
+            score: 0,
+            speed: 8
+        };
+
+        const ai = {
+            x: canvas.width - paddleWidth,
+            y: canvas.height / 2 - paddleHeight / 2,
+            width: paddleWidth,
+            height: paddleHeight,
+            color: '#39ff14',
+            score: 0,
+            speed: 6
+        };
+
+        // Game state
+        let gameRunning = true;
+        let upPressed = false;
+        let downPressed = false;
+
+        function drawBall() {
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+            ctx.fillStyle = ball.color;
+            ctx.shadowColor = ball.color;
+            ctx.shadowBlur = 15;
+            ctx.fill();
+            ctx.shadowBlur = 0;
+            ctx.closePath();
+        }
+
+        function drawPaddle(paddle) {
+            ctx.fillStyle = paddle.color;
+            ctx.shadowColor = paddle.color;
+            ctx.shadowBlur = 15;
+            ctx.fillRect(paddle.x, paddle.y, paddle.width, paddle.height);
+            ctx.shadowBlur = 0;
+        }
+
+        function drawNet() {
+            const dashLength = 20;
+            const gapLength = 15;
+            const netX = canvas.width / 2;
+            ctx.strokeStyle = '#ffffff33';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([dashLength, gapLength]);
+            ctx.beginPath();
+            ctx.moveTo(netX, 0);
+            ctx.lineTo(netX, canvas.height);
+            ctx.stroke();
+            ctx.setLineDash([]);
+        }
+
+        function moveAI() {
+            const aiCenter = ai.y + ai.height / 2;
+            const ballCenter = ball.y;
+            const diff = ballCenter - aiCenter;
+            
+            // Add some prediction
+            if (ball.dx > 0) { // Only move when ball is coming towards AI
+                if (diff > 0 && diff > ai.height/4) { // Ball is below paddle center
+                    ai.y += ai.speed;
+                } else if (diff < 0 && Math.abs(diff) > ai.height/4) { // Ball is above paddle center
+                    ai.y -= ai.speed;
+                }
+            }
+
+            // Keep paddle on screen
+            if (ai.y < 0) ai.y = 0;
+            if (ai.y + ai.height > canvas.height) ai.y = canvas.height - ai.height;
+        }
+
+        function moveBall() {
+            ball.x += ball.dx;
+            ball.y += ball.dy;
+
+            // Collision with top and bottom
+            if (ball.y + ball.radius > canvas.height || ball.y - ball.radius < 0) {
+                ball.dy *= -1;
+            }
+
+            // Collision with paddles
+            if (ball.dx < 0 && ball.x - ball.radius < player.x + player.width &&
+                ball.y > player.y && ball.y < player.y + player.height) {
+                ball.dx *= -1;
+                const diff = ball.y - (player.y + player.height/2);
+                ball.dy = diff * 0.2;
+            }
+
+            if (ball.dx > 0 && ball.x + ball.radius > ai.x &&
+                ball.y > ai.y && ball.y < ai.y + ai.height) {
+                ball.dx *= -1;
+                const diff = ball.y - (ai.y + ai.height/2);
+                ball.dy = diff * 0.2;
+            }
+
+            // Scoring
+            if (ball.x < 0) {
+                ai.score++;
+                aiScoreElement.textContent = ai.score;
+                resetBall();
+            } else if (ball.x > canvas.width) {
+                player.score++;
+                playerScoreElement.textContent = player.score;
+                resetBall();
+            }
+        }
+
+        function resetBall() {
+            ball.x = canvas.width / 2;
+            ball.y = canvas.height / 2;
+            ball.dx = -ball.dx;
+            ball.dy = Math.random() * 10 - 5;
+        }
+
+        function movePlayer() {
+            if (upPressed && player.y > 0) {
+                player.y -= player.speed;
+            }
+            if (downPressed && player.y + player.height < canvas.height) {
+                player.y += player.speed;
+            }
+        }
+
+        function update() {
+            if (!gameRunning) return;
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            drawNet();
+            drawBall();
+            drawPaddle(player);
+            drawPaddle(ai);
+            
+            movePlayer();
+            moveAI();
+            moveBall();
+            
+            requestAnimationFrame(update);
+        }
+
+        function resetGame() {
+            player.score = 0;
+            ai.score = 0;
+            playerScoreElement.textContent = '0';
+            aiScoreElement.textContent = '0';
+            player.y = canvas.height / 2 - paddleHeight / 2;
+            ai.y = canvas.height / 2 - paddleHeight / 2;
+            resetBall();
+            gameRunning = true;
+        }
+
+        // Controls
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowUp' || e.key === 'w') upPressed = true;
+            if (e.key === 'ArrowDown' || e.key === 's') downPressed = true;
+        });
+
+        document.addEventListener('keyup', (e) => {
+            if (e.key === 'ArrowUp' || e.key === 'w') upPressed = false;
+            if (e.key === 'ArrowDown' || e.key === 's') downPressed = false;
+        });
+
+        // Touch controls
+        let touchStart = null;
+        canvas.addEventListener('touchstart', (e) => {
+            touchStart = e.touches[0].clientY;
+            e.preventDefault();
+        });
+
+        canvas.addEventListener('touchmove', (e) => {
+            if (!touchStart) return;
+            
+            const touch = e.touches[0];
+            const diff = touch.clientY - touchStart;
+            
+            if (diff < 0 && player.y > 0) {
+                player.y = Math.max(0, player.y + diff * 0.5);
+            }
+            if (diff > 0 && player.y + player.height < canvas.height) {
+                player.y = Math.min(canvas.height - player.height, player.y + diff * 0.5);
+            }
+            
+            touchStart = touch.clientY;
+            e.preventDefault();
+        });
+
+        canvas.addEventListener('touchend', () => {
+            touchStart = null;
+        });
+
+        // Create particle effect
+        function createParticles() {
+            const particlesContainer = document.getElementById('particles');
+            for(let i = 0; i < 50; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.cssText = `
+                    position: absolute;
+                    width: 2px;
+                    height: 2px;
+                    background: var(--neon-blue);
+                    border-radius: 50%;
+                    left: ${Math.random() * 100}vw;
+                    animation: moveParticle ${15 + Math.random() * 10}s infinite linear;
+                    animation-delay: ${Math.random() * 5}s;
+                `;
+                particlesContainer.appendChild(particle);
+            }
+        }
+
+        createParticles();
+        update();
+    </script>
+</body>
+</html> 

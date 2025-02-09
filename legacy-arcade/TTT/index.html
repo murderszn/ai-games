@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultimate Tic Tac Toe</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Russo+One&display=swap');
+
+        :root {
+            --neon-blue: #00f3ff;
+            --neon-pink: #ff00ff;
+            --neon-green: #39ff14;
+            --game-bg: #1a1a1a;
+            --game-grid: #2B8E80;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: linear-gradient(135deg, #13001e, #000000);
+            color: white;
+            font-family: 'Russo One', sans-serif;
+        }
+
+        .game-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            position: relative;
+            background: radial-gradient(circle at center, transparent 0%, rgba(0,0,0,0.8) 100%);
+        }
+
+        .neon-text {
+            font-family: 'Press Start 2P', cursive;
+            text-shadow: 0 0 5px var(--neon-blue),
+                         0 0 10px var(--neon-blue),
+                         0 0 20px var(--neon-blue),
+                         0 0 40px var(--neon-blue);
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes glow {
+            from {
+                text-shadow: 0 0 5px var(--neon-blue),
+                            0 0 10px var(--neon-blue),
+                            0 0 20px var(--neon-blue);
+            }
+            to {
+                text-shadow: 0 0 10px var(--neon-blue),
+                            0 0 20px var(--neon-blue),
+                            0 0 30px var(--neon-blue),
+                            0 0 40px var(--neon-blue);
+            }
+        }
+
+        #game-info {
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+        }
+
+        .game-container {
+            position: relative;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 20px;
+            box-shadow: 0 0 20px var(--neon-blue);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 600px;
+            margin: 0 auto;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+
+        canvas {
+            width: min(90vw, 90vh);
+            height: min(90vw, 90vh);
+            max-width: 600px;
+            max-height: 600px;
+            touch-action: none; /* Prevents default touch behaviors */
+            border: 2px solid var(--neon-blue);
+            border-radius: 15px;
+            box-shadow: 0 0 15px var(--neon-blue);
+            transition: all 0.3s ease;
+        }
+
+        canvas:hover {
+            box-shadow: 0 0 25px var(--neon-pink);
+            border-color: var(--neon-pink);
+        }
+
+        #restart-btn {
+            margin-top: 20px;
+            padding: 15px 30px;
+            font-size: 1.2em;
+            font-family: 'Press Start 2P', cursive;
+            background: transparent;
+            color: var(--neon-green);
+            border: 2px solid var(--neon-green);
+            border-radius: 8px;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: all 0.3s ease;
+            text-shadow: 0 0 5px var(--neon-green);
+            box-shadow: 0 0 10px var(--neon-green);
+        }
+
+        #restart-btn:hover {
+            background: var(--neon-green);
+            color: black;
+            transform: scale(1.1);
+            box-shadow: 0 0 20px var(--neon-green);
+        }
+
+        .particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        .particle {
+            position: absolute;
+            width: 2px;
+            height: 2px;
+            background: var(--neon-blue);
+            border-radius: 50%;
+            animation: moveParticle 20s infinite linear;
+        }
+
+        @keyframes moveParticle {
+            0% {
+                transform: translateY(0) translateX(0);
+                opacity: 0;
+            }
+            10% {
+                opacity: 1;
+            }
+            90% {
+                opacity: 1;
+            }
+            100% {
+                transform: translateY(-1000px) translateX(100px);
+                opacity: 0;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .game-wrapper {
+                padding: 10px;
+            }
+
+            .game-container {
+                padding: 10px;
+            }
+
+            #game-info {
+                font-size: 1.5em;
+                margin-bottom: 10px;
+            }
+
+            canvas {
+                width: 90vmin;
+                height: 90vmin;
+            }
+
+            #restart-btn {
+                margin-top: 10px;
+                padding: 10px 20px;
+                font-size: 1em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="particles" id="particles"></div>
+    <div class="game-wrapper">
+        <div id="game-info" class="neon-text">Tic Tac Toe</div>
+        <div class="game-container">
+            <canvas id="gameCanvas" width="600" height="600"></canvas>
+            <button id="restart-btn" onclick="resetGame()">Reset Game</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const gameInfo = document.getElementById('game-info');
+        
+        // Game constants
+        const CELL_SIZE = canvas.width / 3;
+        const LINE_WIDTH = 15;
+        const CIRCLE_RADIUS = CELL_SIZE / 3;
+        
+        // Colors
+        const BG_COLOR = 'rgba(26, 26, 26, 0.8)';
+        const LINE_COLOR = '#00f3ff';
+        const X_COLOR = '#ff00ff';
+        const O_COLOR = '#39ff14';
+        
+        // Game state
+        let board = Array(9).fill('');
+        let gameOver = false;
+        let currentPlayer = 'X';
+        
+        // Draw functions
+        function drawBoard() {
+            ctx.fillStyle = BG_COLOR;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            ctx.strokeStyle = LINE_COLOR;
+            ctx.lineWidth = LINE_WIDTH;
+            ctx.shadowColor = LINE_COLOR;
+            ctx.shadowBlur = 15;
+            
+            // Draw grid with more pronounced lines
+            for (let i = 1; i < 3; i++) {
+                // Vertical lines
+                ctx.beginPath();
+                ctx.moveTo(i * canvas.width / 3, 0);
+                ctx.lineTo(i * canvas.width / 3, canvas.height);
+                ctx.stroke();
+                
+                // Horizontal lines
+                ctx.beginPath();
+                ctx.moveTo(0, i * canvas.height / 3);
+                ctx.lineTo(canvas.width, i * canvas.height / 3);
+                ctx.stroke();
+            }
+            
+            ctx.shadowBlur = 0;
+        }
+        
+        function drawX(row, col) {
+            const cellSize = canvas.width / 3;
+            const padding = cellSize * 0.2; // 20% padding
+            const x = col * cellSize;
+            const y = row * cellSize;
+            
+            ctx.strokeStyle = X_COLOR;
+            ctx.shadowColor = X_COLOR;
+            ctx.shadowBlur = 15;
+            ctx.lineWidth = LINE_WIDTH;
+            
+            ctx.beginPath();
+            ctx.moveTo(x + padding, y + padding);
+            ctx.lineTo(x + cellSize - padding, y + cellSize - padding);
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.moveTo(x + cellSize - padding, y + padding);
+            ctx.lineTo(x + padding, y + cellSize - padding);
+            ctx.stroke();
+            
+            ctx.shadowBlur = 0;
+        }
+        
+        function drawO(row, col) {
+            const cellSize = canvas.width / 3;
+            const radius = (cellSize * 0.8) / 2; // 80% of cell size
+            const x = col * cellSize + cellSize / 2;
+            const y = row * cellSize + cellSize / 2;
+            
+            ctx.strokeStyle = O_COLOR;
+            ctx.shadowColor = O_COLOR;
+            ctx.shadowBlur = 15;
+            ctx.lineWidth = LINE_WIDTH;
+            
+            ctx.beginPath();
+            ctx.arc(x, y, radius, 0, Math.PI * 2);
+            ctx.stroke();
+            
+            ctx.shadowBlur = 0;
+        }
+        
+        function checkWin(player) {
+            // Check rows
+            for (let i = 0; i < 3; i++) {
+                if (board[i*3] === player && board[i*3+1] === player && board[i*3+2] === player) {
+                    return true;
+                }
+            }
+            // Check columns
+            for (let i = 0; i < 3; i++) {
+                if (board[i] === player && board[i+3] === player && board[i+6] === player) {
+                    return true;
+                }
+            }
+            // Check diagonals
+            if (board[0] === player && board[4] === player && board[8] === player) {
+                return true;
+            }
+            if (board[2] === player && board[4] === player && board[6] === player) {
+                return true;
+            }
+            return false;
+        }
+        
+        function isBoardFull() {
+            return !board.includes('');
+        }
+        
+        function computerMove() {
+            // Find the best move using minimax
+            let bestScore = -Infinity;
+            let bestMove;
+            
+            // Try all possible moves
+            for(let i = 0; i < 3; i++) {
+                for(let j = 0; j < 3; j++) {
+                    if(board[i * 3 + j] === '') {
+                        board[i * 3 + j] = 'O';
+                        let score = minimax(board, 0, false);
+                        board[i * 3 + j] = '';
+                        
+                        if(score > bestScore) {
+                            bestScore = score;
+                            bestMove = {row: i, col: j};
+                        }
+                    }
+                }
+            }
+            
+            if(bestMove) {
+                makeMove(bestMove.row, bestMove.col);
+            }
+        }
+        
+        // Add minimax algorithm
+        function minimax(board, depth, isMaximizing) {
+            // Check terminal states
+            if(checkWin('O')) return 10 - depth;
+            if(checkWin('X')) return depth - 10;
+            if(isBoardFull()) return 0;
+            
+            if(isMaximizing) {
+                let bestScore = -Infinity;
+                for(let i = 0; i < 3; i++) {
+                    for(let j = 0; j < 3; j++) {
+                        if(board[i * 3 + j] === '') {
+                            board[i * 3 + j] = 'O';
+                            let score = minimax(board, depth + 1, false);
+                            board[i * 3 + j] = '';
+                            bestScore = Math.max(score, bestScore);
+                        }
+                    }
+                }
+                return bestScore;
+            } else {
+                let bestScore = Infinity;
+                for(let i = 0; i < 3; i++) {
+                    for(let j = 0; j < 3; j++) {
+                        if(board[i * 3 + j] === '') {
+                            board[i * 3 + j] = 'X';
+                            let score = minimax(board, depth + 1, true);
+                            board[i * 3 + j] = '';
+                            bestScore = Math.min(score, bestScore);
+                        }
+                    }
+                }
+                return bestScore;
+            }
+        }
+
+        // Add a small delay to computer moves to make them feel more natural
+        function makeComputerMove() {
+            setTimeout(computerMove, 300);
+        }
+
+        function makeMove(row, col) {
+            const index = row * 3 + col;
+            if (board[index] === '' && !gameOver) {
+                board[index] = currentPlayer;
+                if (currentPlayer === 'X') {
+                    drawX(row, col);
+                } else {
+                    drawO(row, col);
+                }
+                
+                if (checkWin(currentPlayer)) {
+                    gameInfo.textContent = `${currentPlayer} Wins!`;
+                    gameOver = true;
+                } else if (isBoardFull()) {
+                    gameInfo.textContent = "It's a Draw!";
+                    gameOver = true;
+                } else {
+                    currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+                    if (currentPlayer === 'O') {
+                        makeComputerMove();
+                    }
+                }
+            }
+        }
+        
+        function handleClick(event) {
+            if (currentPlayer === 'X' && !gameOver) {
+                const rect = canvas.getBoundingClientRect();
+                const x = event.clientX - rect.left;
+                const y = event.clientY - rect.top;
+                const row = Math.floor(y / CELL_SIZE);
+                const col = Math.floor(x / CELL_SIZE);
+                makeMove(row, col);
+            }
+        }
+        
+        function resetGame() {
+            board = Array(9).fill('');
+            gameOver = false;
+            currentPlayer = 'X';
+            gameInfo.textContent = 'Tic Tac Toe';
+            drawBoard();
+        }
+        
+        // Event listeners
+        canvas.addEventListener('click', handleClick);
+        
+        // Add particle effect
+        function createParticles() {
+            const particlesContainer = document.getElementById('particles');
+            for(let i = 0; i < 50; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.left = Math.random() * 100 + 'vw';
+                particle.style.animationDelay = Math.random() * 20 + 's';
+                particle.style.opacity = Math.random();
+                particlesContainer.appendChild(particle);
+            }
+        }
+
+        // Add victory animation
+        function showVictoryEffect() {
+            gameInfo.classList.add('animate__animated', 'animate__rubberBand');
+            setTimeout(() => {
+                gameInfo.classList.remove('animate__animated', 'animate__rubberBand');
+            }, 1000);
+        }
+
+        // Update the makeMove function to include victory animation
+        const originalMakeMove = makeMove;
+        makeMove = function(row, col) {
+            originalMakeMove(row, col);
+            if(gameOver) {
+                showVictoryEffect();
+            }
+        }
+
+        // Initialize particles
+        createParticles();
+
+        // Add hover effect to canvas
+        canvas.addEventListener('mousemove', (e) => {
+            if(!gameOver && currentPlayer === 'X') {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                const row = Math.floor(y / CELL_SIZE);
+                const col = Math.floor(x / CELL_SIZE);
+                
+                // Redraw board
+                drawBoard();
+                // Draw all existing moves
+                board.forEach((value, index) => {
+                    if(value) {
+                        const r = Math.floor(index / 3);
+                        const c = index % 3;
+                        if(value === 'X') drawX(r, c);
+                        else drawO(r, c);
+                    }
+                });
+                
+                // Draw preview if square is empty
+                if(row >= 0 && row < 3 && col >= 0 && col < 3 && board[row * 3 + col] === '') {
+                    ctx.globalAlpha = 0.3;
+                    drawX(row, col);
+                    ctx.globalAlpha = 1;
+                }
+            }
+        });
+
+        // Initialize game
+        drawBoard();
+
+        // Add these functions for better touch handling
+        function getCellFromTouch(e) {
+            const rect = canvas.getBoundingClientRect();
+            const x = e.touches[0].clientX - rect.left;
+            const y = e.touches[0].clientY - rect.top;
+            
+            // Scale the touch coordinates to canvas coordinates
+            const scaleX = canvas.width / rect.width;
+            const scaleY = canvas.height / rect.height;
+            
+            const canvasX = x * scaleX;
+            const canvasY = y * scaleY;
+            
+            // Calculate cell
+            const row = Math.floor(canvasY / (canvas.height / 3));
+            const col = Math.floor(canvasX / (canvas.width / 3));
+            
+            return { row, col };
+        }
+
+        // Update the click handler to work with touch
+        canvas.addEventListener('touchstart', (e) => {
+            e.preventDefault(); // Prevent scrolling
+            if (gameOver) return;
+            
+            const { row, col } = getCellFromTouch(e);
+            if (row >= 0 && row < 3 && col >= 0 && col < 3) {
+                makeMove(row, col);
+            }
+        }, { passive: false });
+
+        // Add visual feedback for touches
+        canvas.addEventListener('touchstart', (e) => {
+            const { row, col } = getCellFromTouch(e);
+            if (board[row * 3 + col] === '') {
+                // Highlight the cell being touched
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+                ctx.fillRect(
+                    col * (canvas.width / 3),
+                    row * (canvas.height / 3),
+                    canvas.width / 3,
+                    canvas.height / 3
+                );
+            }
+        });
+
+        // Clear highlight on touch end
+        canvas.addEventListener('touchend', () => {
+            drawBoard();
+            drawMoves();
+        });
+
+        // Prevent default touch behaviors that might interfere
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+        }, { passive: false });
+    </script>
+</body>
+</html> 

@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cyber Snake</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Russo+One&display=swap');
+
+        :root {
+            --neon-blue: #00f3ff;
+            --neon-pink: #ff00ff;
+            --neon-green: #39ff14;
+            --game-bg: #1a1a1a;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: linear-gradient(135deg, #13001e, #000000);
+            color: white;
+            font-family: 'Russo One', sans-serif;
+        }
+
+        .game-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            position: relative;
+            background: radial-gradient(circle at center, transparent 0%, rgba(0,0,0,0.8) 100%);
+            padding: 2vh;
+            box-sizing: border-box;
+        }
+
+        .neon-text {
+            font-family: 'Press Start 2P', cursive;
+            text-shadow: 0 0 5px var(--neon-blue),
+                         0 0 10px var(--neon-blue),
+                         0 0 20px var(--neon-blue),
+                         0 0 40px var(--neon-blue);
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes glow {
+            from {
+                text-shadow: 0 0 5px var(--neon-blue),
+                            0 0 10px var(--neon-blue),
+                            0 0 20px var(--neon-blue);
+            }
+            to {
+                text-shadow: 0 0 10px var(--neon-blue),
+                            0 0 20px var(--neon-blue),
+                            0 0 30px var(--neon-blue),
+                            0 0 40px var(--neon-blue);
+            }
+        }
+
+        #game-info {
+            font-size: 2.5em;
+            margin-bottom: 20px;
+            text-transform: uppercase;
+            letter-spacing: 3px;
+            font-size: min(2.5em, 5vw);
+        }
+
+        .game-container {
+            position: relative;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 20px;
+            box-shadow: 0 0 20px var(--neon-blue);
+            animation: float 6s ease-in-out infinite;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            max-height: 85vh;
+            padding: 2vh;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+
+        canvas {
+            border: 2px solid var(--neon-blue);
+            border-radius: 15px;
+            box-shadow: 0 0 15px var(--neon-blue);
+            transition: all 0.3s ease;
+            width: min(70vh, 80vw);
+            height: min(70vh, 80vw);
+        }
+
+        canvas:hover {
+            box-shadow: 0 0 25px var(--neon-pink);
+            border-color: var(--neon-pink);
+        }
+
+        #restart-btn {
+            margin-top: 20px;
+            padding: min(15px, 2vh) min(30px, 3vw);
+            font-size: min(1.2em, 3vw);
+            font-family: 'Press Start 2P', cursive;
+            background: transparent;
+            color: var(--neon-green);
+            border: 2px solid var(--neon-green);
+            border-radius: 8px;
+            cursor: pointer;
+            text-transform: uppercase;
+            transition: all 0.3s ease;
+            text-shadow: 0 0 5px var(--neon-green);
+            box-shadow: 0 0 10px var(--neon-green);
+        }
+
+        #restart-btn:hover {
+            background: var(--neon-green);
+            color: black;
+            transform: scale(1.1);
+            box-shadow: 0 0 20px var(--neon-green);
+        }
+
+        .score {
+            font-family: 'Press Start 2P', cursive;
+            color: var(--neon-pink);
+            font-size: min(1.5em, 4vw);
+            margin: 10px 0;
+            text-shadow: 0 0 5px var(--neon-pink);
+        }
+
+        .particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+        }
+    </style>
+</head>
+<body>
+    <div class="particles" id="particles"></div>
+    <div class="game-wrapper">
+        <div id="game-info" class="neon-text">Cyber Snake</div>
+        <div class="game-container">
+            <div class="score">Score: <span id="score">0</span></div>
+            <canvas id="gameCanvas" width="400" height="400"></canvas>
+            <button id="restart-btn" onclick="resetGame()">Reset Game</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreElement = document.getElementById('score');
+        
+        // Set canvas size based on viewport
+        function resizeCanvas() {
+            const size = Math.min(window.innerHeight * 0.7, window.innerWidth * 0.8);
+            canvas.style.width = `${size}px`;
+            canvas.style.height = `${size}px`;
+        }
+        
+        // Call resize on window change
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+        
+        const GRID_SIZE = 20;
+        const CELL_SIZE = 400 / GRID_SIZE; // Keep internal canvas size constant
+        
+        let snake = [
+            {x: 10, y: 10},
+        ];
+        let food = {x: 15, y: 15};
+        let direction = 'right';
+        let score = 0;
+        let gameOver = false;
+        let gameLoop;
+        
+        function drawSnake() {
+            snake.forEach((segment, index) => {
+                ctx.fillStyle = index === 0 ? '#ff00ff' : '#39ff14';
+                ctx.shadowColor = index === 0 ? '#ff00ff' : '#39ff14';
+                ctx.shadowBlur = 10;
+                ctx.fillRect(
+                    segment.x * CELL_SIZE,
+                    segment.y * CELL_SIZE,
+                    CELL_SIZE - 2,
+                    CELL_SIZE - 2
+                );
+                ctx.shadowBlur = 0;
+            });
+        }
+        
+        function drawFood() {
+            ctx.fillStyle = '#00f3ff';
+            ctx.shadowColor = '#00f3ff';
+            ctx.shadowBlur = 15;
+            ctx.beginPath();
+            ctx.arc(
+                food.x * CELL_SIZE + CELL_SIZE/2,
+                food.y * CELL_SIZE + CELL_SIZE/2,
+                CELL_SIZE/2 - 2,
+                0,
+                Math.PI * 2
+            );
+            ctx.fill();
+            ctx.shadowBlur = 0;
+        }
+        
+        function moveSnake() {
+            if (gameOver) return;
+            
+            const head = {...snake[0]};
+            
+            switch(direction) {
+                case 'up': head.y--; break;
+                case 'down': head.y++; break;
+                case 'left': head.x--; break;
+                case 'right': head.x++; break;
+            }
+            
+            // Check collision with walls
+            if (head.x < 0 || head.x >= GRID_SIZE || head.y < 0 || head.y >= GRID_SIZE) {
+                endGame();
+                return;
+            }
+            
+            // Check collision with self
+            if (snake.some(segment => segment.x === head.x && segment.y === head.y)) {
+                endGame();
+                return;
+            }
+            
+            snake.unshift(head);
+            
+            // Check if food is eaten
+            if (head.x === food.x && head.y === food.y) {
+                score += 10;
+                scoreElement.textContent = score;
+                generateFood();
+            } else {
+                snake.pop();
+            }
+        }
+        
+        function generateFood() {
+            food = {
+                x: Math.floor(Math.random() * GRID_SIZE),
+                y: Math.floor(Math.random() * GRID_SIZE)
+            };
+            // Make sure food doesn't spawn on snake
+            while (snake.some(segment => segment.x === food.x && segment.y === food.y)) {
+                food = {
+                    x: Math.floor(Math.random() * GRID_SIZE),
+                    y: Math.floor(Math.random() * GRID_SIZE)
+                };
+            }
+        }
+        
+        function drawGame() {
+            ctx.fillStyle = 'rgba(26, 26, 26, 0.8)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            drawSnake();
+            drawFood();
+        }
+        
+        function gameStep() {
+            moveSnake();
+            drawGame();
+        }
+        
+        function endGame() {
+            gameOver = true;
+            clearInterval(gameLoop);
+            document.getElementById('game-info').textContent = 'Game Over!';
+        }
+        
+        function resetGame() {
+            snake = [{x: 10, y: 10}];
+            direction = 'right';
+            score = 0;
+            gameOver = false;
+            scoreElement.textContent = score;
+            document.getElementById('game-info').textContent = 'Cyber Snake';
+            generateFood();
+            clearInterval(gameLoop);
+            gameLoop = setInterval(gameStep, 150);
+        }
+        
+        // Add keyboard controls
+        document.addEventListener('keydown', (event) => {
+            if (gameOver) return;
+            
+            switch(event.key) {
+                case 'ArrowUp':
+                case 'w':
+                case 'W':
+                    if (direction !== 'down') direction = 'up';
+                    break;
+                case 'ArrowDown':
+                case 's':
+                case 'S':
+                    if (direction !== 'up') direction = 'down';
+                    break;
+                case 'ArrowLeft':
+                case 'a':
+                case 'A':
+                    if (direction !== 'right') direction = 'left';
+                    break;
+                case 'ArrowRight':
+                case 'd':
+                case 'D':
+                    if (direction !== 'left') direction = 'right';
+                    break;
+            }
+        });
+
+        // Add touch controls for mobile
+        let touchStartX = 0;
+        let touchStartY = 0;
+        
+        canvas.addEventListener('touchstart', (e) => {
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+            e.preventDefault();
+        }, false);
+        
+        canvas.addEventListener('touchmove', (e) => {
+            if (gameOver) return;
+            
+            const touchEndX = e.touches[0].clientX;
+            const touchEndY = e.touches[0].clientY;
+            
+            const dx = touchEndX - touchStartX;
+            const dy = touchEndY - touchStartY;
+            
+            if (Math.abs(dx) > Math.abs(dy)) {
+                if (dx > 0 && direction !== 'left') direction = 'right';
+                else if (dx < 0 && direction !== 'right') direction = 'left';
+            } else {
+                if (dy > 0 && direction !== 'up') direction = 'down';
+                else if (dy < 0 && direction !== 'down') direction = 'up';
+            }
+            
+            touchStartX = touchEndX;
+            touchStartY = touchEndY;
+            e.preventDefault();
+        }, false);
+
+        // Create particle effect
+        function createParticles() {
+            const particlesContainer = document.getElementById('particles');
+            for(let i = 0; i < 50; i++) {
+                const particle = document.createElement('div');
+                particle.className = 'particle';
+                particle.style.cssText = `
+                    position: absolute;
+                    width: 2px;
+                    height: 2px;
+                    background: var(--neon-blue);
+                    border-radius: 50%;
+                    left: ${Math.random() * 100}vw;
+                    animation: moveParticle ${15 + Math.random() * 10}s infinite linear;
+                    animation-delay: ${Math.random() * 5}s;
+                `;
+                particlesContainer.appendChild(particle);
+            }
+        }
+        
+        createParticles();
+        resetGame();
+    </script>
+</body>
+</html> 

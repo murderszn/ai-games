@@ -1,0 +1,452 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Legacy Arcade</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    <script>
+        // Device detection
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+        
+        // Add mobile class to body if on mobile device
+        document.addEventListener('DOMContentLoaded', () => {
+            if (isMobile) {
+                document.body.classList.add('mobile');
+            }
+        });
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Russo+One&display=swap');
+
+        :root {
+            --neon-blue: #00f3ff;
+            --neon-pink: #ff00ff;
+            --neon-green: #39ff14;
+            --neon-purple: #b026ff;
+            --neon-orange: #ff6b08;
+            --game-bg: #1a1a1a;
+            --blacklight-glow: 0 0 20px;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: linear-gradient(135deg, #0d0029, #000000);
+            color: white;
+            font-family: 'Russo One', sans-serif;
+        }
+
+        .arcade-container {
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            padding: 2vh;
+            box-sizing: border-box;
+            background: radial-gradient(circle at center, #1a004d 0%, rgba(0,0,0,0.95) 100%);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 4vh;
+        }
+
+        .title {
+            font-family: 'Press Start 2P', cursive;
+            font-size: min(4em, 8vw);
+            margin: 0;
+            color: var(--neon-purple);
+            text-shadow: 0 0 5px var(--neon-purple),
+                         0 0 10px var(--neon-purple),
+                         0 0 20px var(--neon-purple);
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+
+        .subtitle {
+            font-family: 'Press Start 2P', cursive;
+            font-size: min(1.2em, 3vw);
+            color: var(--neon-orange);
+            margin-top: 1vh;
+            text-shadow: var(--blacklight-glow) var(--neon-orange);
+        }
+
+        .games-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 2rem;
+            padding: 2vh;
+            overflow-y: auto;
+            max-height: 75vh;
+            align-items: start;
+        }
+
+        .game-card {
+            background: rgba(0, 0, 0, 0.8);
+            border: 3px solid var(--neon-blue);
+            border-radius: 15px;
+            padding: 1.5rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+            height: 400px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            box-shadow: 0 0 15px rgba(0, 243, 255, 0.3);
+        }
+
+        .game-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 0 30px var(--neon-blue);
+            border-color: var(--neon-pink);
+        }
+
+        .game-title {
+            font-family: 'Press Start 2P', cursive;
+            font-size: 1.2rem;
+            color: var(--neon-purple);
+            margin: 0.5rem 0;
+            text-shadow: var(--blacklight-glow) var(--neon-purple);
+        }
+
+        .game-image {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+            border-radius: 10px;
+            margin: 1rem 0;
+            border: 2px solid var(--neon-blue);
+            box-shadow: var(--blacklight-glow) var(--neon-blue);
+        }
+
+        .game-description {
+            font-size: 0.9rem;
+            color: #fff;
+            margin: 1rem 0;
+            text-shadow: 0 0 10px rgba(255, 255, 255, 0.5);
+        }
+
+        .game-features {
+            font-size: 0.8rem;
+            color: var(--neon-orange);
+            margin-top: 0.5rem;
+            text-shadow: var(--blacklight-glow) var(--neon-orange);
+        }
+
+        .iframe-container {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.9);
+            z-index: 1000;
+        }
+
+        .iframe-container.active {
+            display: block;
+        }
+
+        #game-frame {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+
+        .back-button {
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1001;
+            padding: 10px 20px;
+            font-family: 'Press Start 2P', cursive;
+            background: transparent;
+            color: var(--neon-green);
+            border: 2px solid var(--neon-green);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: none;
+        }
+
+        .back-button.active {
+            display: block;
+        }
+
+        .back-button:hover {
+            background: var(--neon-green);
+            color: black;
+            transform: scale(1.1);
+        }
+
+        @keyframes glow {
+            from {
+                text-shadow: 0 0 5px var(--neon-purple),
+                            0 0 10px var(--neon-purple);
+            }
+            to {
+                text-shadow: 0 0 10px var(--neon-purple),
+                            0 0 20px var(--neon-purple),
+                            0 0 30px var(--neon-purple);
+            }
+        }
+
+        .game-card.coming-soon {
+            opacity: 0.7;
+            cursor: not-allowed;
+            filter: grayscale(0.6);
+            border-color: var(--neon-purple);
+            box-shadow: 0 0 15px rgba(176, 38, 255, 0.2);
+        }
+
+        .game-card.coming-soon:hover {
+            transform: none;
+            box-shadow: 0 0 15px rgba(176, 38, 255, 0.2);
+            border-color: var(--neon-purple);
+        }
+
+        .game-card.coming-soon .game-title {
+            color: var(--neon-purple);
+            opacity: 0.7;
+        }
+
+        .game-card.coming-soon .game-features {
+            color: var(--neon-pink);
+            opacity: 0.7;
+        }
+
+        .games-grid::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .games-grid::-webkit-scrollbar-track {
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 4px;
+        }
+
+        .games-grid::-webkit-scrollbar-thumb {
+            background: var(--neon-purple);
+            border-radius: 4px;
+            box-shadow: var(--blacklight-glow) var(--neon-purple);
+        }
+
+        .mobile-controls {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            padding: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1002;
+            text-align: center;
+        }
+
+        .mobile .mobile-controls {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+        }
+
+        .control-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: transparent;
+            border: 2px solid var(--neon-blue);
+            color: var(--neon-blue);
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+
+        .control-btn:active {
+            background: var(--neon-blue);
+            color: black;
+        }
+
+        .mobile .iframe-container {
+            height: calc(100vh - 100px);
+        }
+
+        @media (max-width: 768px) {
+            .game-card {
+                height: auto;
+                min-height: 350px;
+            }
+
+            .game-image {
+                height: 150px;
+            }
+
+            .games-grid {
+                grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+                gap: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="arcade-container">
+        <header class="header">
+            <h1 class="title">Legacy Arcade</h1>
+            <p class="subtitle">Challenge our AI in Classic Games!</p>
+        </header>
+
+        <div class="games-grid">
+            <div class="game-card" onclick="loadGame('TTT/index.html')">
+                <h2 class="game-title">Tic Tac Toe</h2>
+                <img class="game-image" src="https://placehold.co/400x300/2B8E80/white?text=Tic+Tac+Toe" alt="Tic Tac Toe">
+                <p class="game-description">Challenge our unbeatable AI in the classic game of Tic Tac Toe!</p>
+                <p class="game-features">Features: Minimax AI, Neon Design</p>
+            </div>
+
+            <div class="game-card" onclick="loadGame('Snake/index.html')">
+                <h2 class="game-title">Cyber Snake</h2>
+                <img class="game-image" src="https://placehold.co/400x300/2B8E80/white?text=Snake" alt="Snake">
+                <p class="game-description">Navigate through the cyber grid, eating pixels and growing longer!</p>
+                <p class="game-features">Features: Dynamic Speed, Touch Controls</p>
+            </div>
+
+            <div class="game-card" onclick="loadGame('Pong/index.html')">
+                <h2 class="game-title">Neon Pong</h2>
+                <img class="game-image" src="https://placehold.co/400x300/2B8E80/white?text=Pong" alt="Pong">
+                <p class="game-description">Face off against our adaptive AI in this classic arcade game!</p>
+                <p class="game-features">Features: AI Opponent, Particle Effects</p>
+            </div>
+
+            <div class="game-card coming-soon">
+                <h2 class="game-title">Pac-Man</h2>
+                <img class="game-image" src="https://placehold.co/400x300/404040/white?text=Coming+Soon" alt="Pac-Man">
+                <p class="game-description">Navigate mazes while avoiding AI-powered ghosts!</p>
+                <p class="game-features">Coming Soon: Advanced Ghost AI, Power-ups</p>
+            </div>
+
+            <div class="game-card coming-soon">
+                <h2 class="game-title">Breakout</h2>
+                <img class="game-image" src="https://placehold.co/400x300/404040/white?text=Coming+Soon" alt="Breakout">
+                <p class="game-description">Break through layers of bricks in this arcade classic!</p>
+                <p class="game-features">Coming Soon: Dynamic Difficulty, Power-ups</p>
+            </div>
+
+            <div class="game-card coming-soon">
+                <h2 class="game-title">Tetris</h2>
+                <img class="game-image" src="https://placehold.co/400x300/404040/white?text=Coming+Soon" alt="Tetris">
+                <p class="game-description">Master the art of block placement in this timeless puzzle!</p>
+                <p class="game-features">Coming Soon: AI Assistant, Speed Modes</p>
+            </div>
+
+            <div class="game-card coming-soon">
+                <h2 class="game-title">Space Invaders</h2>
+                <img class="game-image" src="https://placehold.co/400x300/404040/white?text=Coming+Soon" alt="Space Invaders">
+                <p class="game-description">Defend Earth against waves of alien invaders!</p>
+                <p class="game-features">Coming Soon: Pattern Learning AI, Power-ups</p>
+            </div>
+
+            <div class="game-card coming-soon">
+                <h2 class="game-title">Galaga</h2>
+                <img class="game-image" src="https://placehold.co/400x300/404040/white?text=Coming+Soon" alt="Galaga">
+                <p class="game-description">Face off against formations of alien ships!</p>
+                <p class="game-features">Coming Soon: Formation AI, Dual Fighter Mode</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="iframe-container">
+        <button class="back-button">← Back to Arcade</button>
+        <iframe id="game-frame" frameborder="0"></iframe>
+    </div>
+
+    <div class="mobile-controls"></div>
+
+    <script>
+        function loadGame(gamePath) {
+            const container = document.querySelector('.iframe-container');
+            const frame = document.getElementById('game-frame');
+            const backButton = document.querySelector('.back-button');
+            const controls = document.querySelector('.mobile-controls');
+            
+            frame.src = gamePath;
+            container.classList.add('active');
+            backButton.classList.add('active');
+
+            // Show appropriate mobile controls based on game
+            if (isMobile) {
+                if (gamePath.includes('Snake')) {
+                    showSnakeControls();
+                } else if (gamePath.includes('Pong')) {
+                    showPongControls();
+                } else if (gamePath.includes('TTT')) {
+                    // TTT uses direct touch, no extra controls needed
+                    controls.style.display = 'none';
+                }
+            }
+        }
+
+        function showSnakeControls() {
+            const controls = document.querySelector('.mobile-controls');
+            controls.innerHTML = `
+                <button class="control-btn" id="up">↑</button>
+                <button class="control-btn" id="left">←</button>
+                <button class="control-btn" id="right">→</button>
+                <button class="control-btn" id="down">↓</button>
+            `;
+            controls.style.display = 'flex';
+
+            // Add touch controls for Snake
+            const buttons = controls.querySelectorAll('.control-btn');
+            buttons.forEach(btn => {
+                btn.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    const direction = btn.id;
+                    const frame = document.getElementById('game-frame');
+                    frame.contentWindow.postMessage({ type: 'direction', direction }, '*');
+                });
+            });
+        }
+
+        function showPongControls() {
+            const controls = document.querySelector('.mobile-controls');
+            controls.innerHTML = `
+                <button class="control-btn" id="up">↑</button>
+                <button class="control-btn" id="down">↓</button>
+            `;
+            controls.style.display = 'flex';
+
+            // Add touch controls for Pong
+            const buttons = controls.querySelectorAll('.control-btn');
+            buttons.forEach(btn => {
+                btn.addEventListener('touchstart', (e) => {
+                    e.preventDefault();
+                    const direction = btn.id;
+                    const frame = document.getElementById('game-frame');
+                    frame.contentWindow.postMessage({ type: 'direction', direction }, '*');
+                });
+            });
+        }
+
+        document.querySelector('.back-button').addEventListener('click', () => {
+            const container = document.querySelector('.iframe-container');
+            const frame = document.getElementById('game-frame');
+            const backButton = document.querySelector('.back-button');
+            const controls = document.querySelector('.mobile-controls');
+            
+            frame.src = '';
+            container.classList.remove('active');
+            backButton.classList.remove('active');
+            controls.style.display = 'none';
+        });
+    </script>
+</body>
+</html> 

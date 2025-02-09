@@ -1,0 +1,10 @@
+{
+  "hosting": {
+    "public": "legacy-arcade",
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**"
+    ]
+  }
+}
