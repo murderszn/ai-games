@@ -60,35 +60,44 @@
             background: rgba(0, 0, 0, 0.6);
             border-radius: 20px;
             box-shadow: 0 0 20px var(--neon-blue);
-            animation: float 6s ease-in-out infinite;
             display: flex;
             flex-direction: column;
             align-items: center;
-            max-height: 85vh;
+            gap: 1vh;
         }
 
-        @keyframes float {
-            0% { transform: translateY(0px); }
-            50% { transform: translateY(-10px); }
-            100% { transform: translateY(0px); }
+        .score-container {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            padding: 0 2vh;
+            margin-bottom: 1vh;
+        }
+
+        .score, .level, .lives {
+            font-family: 'Press Start 2P', cursive;
+            font-size: min(1.2em, 3vw);
+            margin: 0;
         }
 
         canvas {
             border: 2px solid var(--neon-blue);
             border-radius: 15px;
             box-shadow: 0 0 15px var(--neon-blue);
-            transition: all 0.3s ease;
-            width: min(70vh, 80vw);
-            height: min(70vh, 80vw);
+            background: rgba(0, 0, 0, 0.8);
+            width: 600px;
+            height: 600px;
         }
 
-        canvas:hover {
-            box-shadow: 0 0 25px var(--neon-pink);
-            border-color: var(--neon-pink);
-        }
-
-        #restart-btn {
+        .button-container {
+            display: flex;
+            gap: 1rem;
             margin-top: 20px;
+            position: relative;
+            z-index: 2;
+        }
+
+        .game-btn {
             padding: min(15px, 2vh) min(30px, 3vw);
             font-size: min(1.2em, 3vw);
             font-family: 'Press Start 2P', cursive;
@@ -102,46 +111,48 @@
             box-shadow: 0 0 10px var(--neon-green);
         }
 
-        #restart-btn:hover {
+        .game-btn:hover {
             background: var(--neon-green);
             color: black;
             transform: scale(1.1);
             box-shadow: 0 0 20px var(--neon-green);
         }
 
-        .score, .level, .lives {
-            font-family: 'Press Start 2P', cursive;
-            font-size: min(1.5em, 4vw);
-            margin: 5px 0;
-        }
-
-        .score { color: var(--neon-pink); text-shadow: 0 0 5px var(--neon-pink); }
-        .level { color: var(--neon-blue); text-shadow: 0 0 5px var(--neon-blue); }
-        .lives { color: var(--neon-green); text-shadow: 0 0 5px var(--neon-green); }
-
-        .particles {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: -1;
-        }
-
-        // Add these touch-specific styles
-        .mobile-shoot-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+        .mobile-controls {
             display: none;
+            position: fixed;
+            bottom: 20px;
+            width: 100%;
+            justify-content: center;
+            gap: 20px;
+        }
+
+        .control-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            background: transparent;
+            border: 2px solid var(--neon-blue);
+            color: var(--neon-blue);
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
         }
 
         @media (max-width: 768px) {
-            .mobile-shoot-overlay {
-                display: block;
+            .mobile-controls {
+                display: flex;
+            }
+            
+            canvas {
+                width: min(90vw, 90vh);
+                height: min(90vw, 90vh);
+            }
+            
+            .score-container {
+                font-size: 0.8em;
             }
         }
     </style>
@@ -149,14 +160,24 @@
 <body>
     <div class="particles" id="particles"></div>
     <div class="game-wrapper">
-        <div id="game-info" class="neon-text">Invaders.AI</div>
+        <div id="game-info">Invaders.AI</div>
         <div class="game-container">
-            <div class="score">Score: <span id="score">0</span></div>
-            <div class="level">Level: <span id="level">1</span></div>
-            <div class="lives">Lives: <span id="lives">3</span></div>
+            <div class="score-container">
+                <div class="score">Score: <span id="score">0</span></div>
+                <div class="level">Level: <span id="level">1</span></div>
+                <div class="lives">Lives: <span id="lives">3</span></div>
+            </div>
             <canvas id="gameCanvas" width="600" height="600"></canvas>
-            <button id="restart-btn" onclick="resetGame()">Reset Game</button>
+            <div class="button-container">
+                <button id="start-btn" class="game-btn">Start Game</button>
+                <button id="restart-btn" class="game-btn" style="display: none;">Reset Game</button>
+            </div>
         </div>
+    </div>
+    <div class="mobile-controls">
+        <button class="control-btn" id="leftBtn">←</button>
+        <button class="control-btn" id="shootBtn">🔥</button>
+        <button class="control-btn" id="rightBtn">→</button>
     </div>
 
     <script>
@@ -168,7 +189,8 @@
 
         // Responsive canvas sizing
         function resizeCanvas() {
-            const size = Math.min(window.innerHeight * 0.7, window.innerWidth * 0.8);
+            const container = canvas.parentElement;
+            const size = Math.min(container.clientWidth, container.clientHeight) * 0.9;
             canvas.style.width = `${size}px`;
             canvas.style.height = `${size}px`;
         }
@@ -387,64 +409,7 @@
         }
         createParticles();
 
-        // Update the game initialization
-        function initGame() {
-            // ... existing init code ...
-
-            // Add touch shooting for mobile
-            const shootOverlay = document.createElement('div');
-            shootOverlay.className = 'mobile-shoot-overlay';
-            canvas.parentElement.appendChild(shootOverlay);
-
-            shootOverlay.addEventListener('touchstart', (e) => {
-                e.preventDefault();
-                keys[' '] = true;
-            });
-
-            shootOverlay.addEventListener('touchend', (e) => {
-                e.preventDefault();
-                keys[' '] = false;
-            });
-
-            // Improve mobile responsiveness
-            function handleResize() {
-                const container = canvas.parentElement;
-                const size = Math.min(window.innerHeight * 0.7, window.innerWidth * 0.8);
-                canvas.style.width = `${size}px`;
-                canvas.style.height = `${size}px`;
-                
-                // Adjust game elements for new size
-                const scale = size / 600;
-                PLAYER_WIDTH = Math.floor(40 * scale);
-                PLAYER_HEIGHT = Math.floor(40 * scale);
-                ENEMY_SIZE = Math.floor(30 * scale);
-                BULLET_WIDTH = Math.floor(8 * scale);
-                BULLET_HEIGHT = Math.floor(20 * scale);
-            }
-
-            window.addEventListener('resize', handleResize);
-            handleResize();
-        }
-
         gameLoop();
-
-        // Add this event listener near the end of the script section
-        window.addEventListener('message', (event) => {
-            if (event.data.type === 'control') {
-                const { button, action } = event.data;
-                switch (button) {
-                    case 'left':
-                        keys['ArrowLeft'] = action === 'press';
-                        break;
-                    case 'right':
-                        keys['ArrowRight'] = action === 'press';
-                        break;
-                    case 'shoot':
-                        keys[' '] = action === 'press';
-                        break;
-                }
-            }
-        });
     </script>
 </body>
 </html>
