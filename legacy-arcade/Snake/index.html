@@ -96,6 +96,7 @@
             transition: all 0.3s ease;
             width: min(70vh, 80vw);
             height: min(70vh, 80vw);
+            touch-action: none;
         }
 
         canvas:hover {
@@ -143,6 +144,53 @@
             pointer-events: none;
             z-index: -1;
         }
+
+        #gameContainer {
+            position: relative;
+            width: 90vmin;
+            height: 90vmin;
+            max-width: 600px;
+            max-height: 600px;
+        }
+
+        #score {
+            position: absolute;
+            top: -40px;
+            left: 0;
+            color: var(--neon-green);
+            font-size: 1.2em;
+            text-shadow: 0 0 10px var(--neon-green);
+        }
+
+        .mobile-controls {
+            position: fixed;
+            bottom: 20px;
+            display: none;
+            gap: 20px;
+            justify-content: center;
+            width: 100%;
+        }
+
+        .control-btn {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: 2px solid var(--neon-blue);
+            background: transparent;
+            color: var(--neon-blue);
+            font-size: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            touch-action: manipulation;
+        }
+
+        @media (max-width: 768px) {
+            .mobile-controls {
+                display: flex;
+            }
+        }
     </style>
 </head>
 <body>
@@ -154,6 +202,12 @@
             <canvas id="gameCanvas" width="400" height="400"></canvas>
             <button id="restart-btn" onclick="resetGame()">Reset Game</button>
         </div>
+    </div>
+    <div class="mobile-controls">
+        <button class="control-btn" id="upBtn">↑</button>
+        <button class="control-btn" id="leftBtn">←</button>
+        <button class="control-btn" id="rightBtn">→</button>
+        <button class="control-btn" id="downBtn">↓</button>
     </div>
 
     <script>
@@ -273,11 +327,6 @@
             drawFood();
         }
         
-        function gameStep() {
-            moveSnake();
-            drawGame();
-        }
-        
         function endGame() {
             gameOver = true;
             clearInterval(gameLoop);
@@ -378,6 +427,59 @@
         
         createParticles();
         resetGame();
+
+        // Event listeners
+        window.addEventListener('resize', resizeCanvas);
+        window.addEventListener('load', () => {
+            resizeCanvas();
+            resetGame();
+        });
+
+        // Message handling for arcade integration
+        window.addEventListener('message', (event) => {
+            if (event.data.type === 'direction') {
+                const newDirection = event.data.direction;
+                switch(newDirection) {
+                    case 'up':
+                        if (direction !== 'down') direction = 'up';
+                        break;
+                    case 'down':
+                        if (direction !== 'up') direction = 'down';
+                        break;
+                    case 'left':
+                        if (direction !== 'right') direction = 'left';
+                        break;
+                    case 'right':
+                        if (direction !== 'left') direction = 'right';
+                        break;
+                }
+            }
+        });
+
+        // Update game loop for better mobile performance
+        let lastTime = 0;
+        const targetFPS = 60;
+        const frameInterval = 1000 / targetFPS;
+
+        function gameLoop(timestamp) {
+            if (!lastTime) lastTime = timestamp;
+            const elapsed = timestamp - lastTime;
+
+            if (elapsed > frameInterval) {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                moveSnake();
+                drawGame();
+                lastTime = timestamp - (elapsed % frameInterval);
+            }
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Add this to prevent mobile browser gestures
+        document.body.addEventListener('touchmove', (e) => {
+            if (e.target === canvas) {
+                e.preventDefault();
+            }
+        }, { passive: false });
     </script>
 </body>
 </html> 

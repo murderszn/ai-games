@@ -1,0 +1,450 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Invaders.AI</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css"/>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Russo+One&display=swap');
+
+        :root {
+            --neon-blue: #00f3ff;
+            --neon-pink: #ff00ff;
+            --neon-green: #39ff14;
+            --game-bg: #1a1a1a;
+        }
+
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: linear-gradient(135deg, #13001e, #000000);
+            color: white;
+            font-family: 'Russo One', sans-serif;
+        }
+
+        .game-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100vh;
+            position: relative;
+            background: radial-gradient(circle at center, transparent 0%, rgba(0,0,0,0.8) 100%);
+            padding: 2vh;
+            box-sizing: border-box;
+        }
+
+        .neon-text {
+            font-family: 'Press Start 2P', cursive;
+            text-shadow: 0 0 5px var(--neon-blue),
+                         0 0 10px var(--neon-blue),
+                         0 0 20px var(--neon-blue),
+                         0 0 40px var(--neon-blue);
+            animation: glow 2s ease-in-out infinite alternate;
+        }
+
+        @keyframes glow {
+            from { text-shadow: 0 0 5px var(--neon-blue), 0 0 10px var(--neon-blue), 0 0 20px var(--neon-blue); }
+            to { text-shadow: 0 0 10px var(--neon-blue), 0 0 20px var(--neon-blue), 0 0 30px var(--neon-blue), 0 0 40px var(--neon-blue); }
+        }
+
+        #game-info { font-size: min(2.5em, 5vw); margin-bottom: 20px; text-transform: uppercase; letter-spacing: 3px; }
+
+        .game-container {
+            position: relative;
+            padding: 2vh;
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 20px;
+            box-shadow: 0 0 20px var(--neon-blue);
+            animation: float 6s ease-in-out infinite;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            max-height: 85vh;
+        }
+
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+
+        canvas {
+            border: 2px solid var(--neon-blue);
+            border-radius: 15px;
+            box-shadow: 0 0 15px var(--neon-blue);
+            transition: all 0.3s ease;
+            width: min(70vh, 80vw);
+            height: min(70vh, 80vw);
+        }
+
+        canvas:hover {
+            box-shadow: 0 0 25px var(--neon-pink);
+            border-color: var(--neon-pink);
+        }
+
+        #restart-btn {
+            margin-top: 20px;
+            padding: min(15px, 2vh) min(30px, 3vw);
+            font-size: min(1.2em, 3vw);
+            font-family: 'Press Start 2P', cursive;
+            background: transparent;
+            color: var(--neon-green);
+            border: 2px solid var(--neon-green);
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-shadow: 0 0 5px var(--neon-green);
+            box-shadow: 0 0 10px var(--neon-green);
+        }
+
+        #restart-btn:hover {
+            background: var(--neon-green);
+            color: black;
+            transform: scale(1.1);
+            box-shadow: 0 0 20px var(--neon-green);
+        }
+
+        .score, .level, .lives {
+            font-family: 'Press Start 2P', cursive;
+            font-size: min(1.5em, 4vw);
+            margin: 5px 0;
+        }
+
+        .score { color: var(--neon-pink); text-shadow: 0 0 5px var(--neon-pink); }
+        .level { color: var(--neon-blue); text-shadow: 0 0 5px var(--neon-blue); }
+        .lives { color: var(--neon-green); text-shadow: 0 0 5px var(--neon-green); }
+
+        .particles {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: -1;
+        }
+
+        // Add these touch-specific styles
+        .mobile-shoot-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: none;
+        }
+
+        @media (max-width: 768px) {
+            .mobile-shoot-overlay {
+                display: block;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="particles" id="particles"></div>
+    <div class="game-wrapper">
+        <div id="game-info" class="neon-text">Invaders.AI</div>
+        <div class="game-container">
+            <div class="score">Score: <span id="score">0</span></div>
+            <div class="level">Level: <span id="level">1</span></div>
+            <div class="lives">Lives: <span id="lives">3</span></div>
+            <canvas id="gameCanvas" width="600" height="600"></canvas>
+            <button id="restart-btn" onclick="resetGame()">Reset Game</button>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreEl = document.getElementById('score');
+        const levelEl = document.getElementById('level');
+        const livesEl = document.getElementById('lives');
+
+        // Responsive canvas sizing
+        function resizeCanvas() {
+            const size = Math.min(window.innerHeight * 0.7, window.innerWidth * 0.8);
+            canvas.style.width = `${size}px`;
+            canvas.style.height = `${size}px`;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        // Game constants
+        const PLAYER_WIDTH = 40;
+        const PLAYER_HEIGHT = 40;
+        const ENEMY_SIZE = 30;
+        const BULLET_WIDTH = 8;
+        const BULLET_HEIGHT = 20;
+
+        // Game state
+        let player = { x: 280, y: 540, speed: 5 };
+        let bullets = [];
+        let enemies = [];
+        let score = 0;
+        let level = 1;
+        let lives = 3;
+        let gameOver = false;
+        let keys = {};
+        let lastShot = 0;
+        const SHOOT_DELAY = 200; // ms between shots
+
+        // Initialize enemies
+        function spawnEnemies(count) {
+            for (let i = 0; i < count; i++) {
+                enemies.push({
+                    x: Math.random() * (canvas.width - ENEMY_SIZE),
+                    y: -Math.random() * 100,
+                    speed: 1 + level * 0.5,
+                    aiTracking: Math.random()
+                });
+            }
+        }
+        spawnEnemies(8);
+
+        // Drawing functions
+        function drawPlayer() {
+            ctx.fillStyle = '#39ff14';
+            ctx.shadowColor = '#39ff14';
+            ctx.shadowBlur = 10;
+            ctx.fillRect(player.x, player.y, PLAYER_WIDTH, PLAYER_HEIGHT);
+            ctx.shadowBlur = 0;
+        }
+
+        function drawBullets() {
+            ctx.fillStyle = '#00f3ff';
+            ctx.shadowColor = '#00f3ff';
+            ctx.shadowBlur = 5;
+            bullets.forEach(bullet => {
+                ctx.fillRect(bullet.x, bullet.y, BULLET_WIDTH, BULLET_HEIGHT);
+            });
+            ctx.shadowBlur = 0;
+        }
+
+        function drawEnemies() {
+            ctx.fillStyle = '#ff00ff';
+            ctx.shadowColor = '#ff00ff';
+            ctx.shadowBlur = 8;
+            enemies.forEach(enemy => {
+                ctx.fillRect(enemy.x, enemy.y, ENEMY_SIZE, ENEMY_SIZE);
+            });
+            ctx.shadowBlur = 0;
+        }
+
+        // Game logic
+        function update() {
+            if (gameOver) return;
+
+            // Player movement
+            if (keys['ArrowLeft'] && player.x > 0) player.x -= player.speed;
+            if (keys['ArrowRight'] && player.x < canvas.width - PLAYER_WIDTH) player.x += player.speed;
+
+            // Shooting
+            if (keys[' '] && Date.now() - lastShot > SHOOT_DELAY) {
+                bullets.push({ x: player.x + PLAYER_WIDTH/2 - BULLET_WIDTH/2, y: player.y - BULLET_HEIGHT });
+                lastShot = Date.now();
+            }
+
+            // Update bullets
+            bullets = bullets.filter(b => b.y > -BULLET_HEIGHT);
+            bullets.forEach(b => b.y -= 10);
+
+            // Update enemies
+            enemies.forEach(enemy => {
+                enemy.y += enemy.speed;
+                if (Math.random() < enemy.aiTracking) {
+                    if (player.x > enemy.x) enemy.x += Math.min(2, enemy.speed);
+                    else if (player.x < enemy.x) enemy.x -= Math.min(2, enemy.speed);
+                }
+                if (enemy.y > canvas.height) {
+                    enemy.y = -Math.random() * 100;
+                    enemy.x = Math.random() * (canvas.width - ENEMY_SIZE);
+                }
+            });
+
+            // Collision detection
+            bullets.forEach((bullet, bIndex) => {
+                enemies.forEach((enemy, eIndex) => {
+                    if (bullet.x < enemy.x + ENEMY_SIZE && bullet.x + BULLET_WIDTH > enemy.x &&
+                        bullet.y < enemy.y + ENEMY_SIZE && bullet.y + BULLET_HEIGHT > enemy.y) {
+                        score += 10 + level * 5;
+                        bullets.splice(bIndex, 1);
+                        enemies.splice(eIndex, 1);
+                        enemies.push({
+                            x: Math.random() * (canvas.width - ENEMY_SIZE),
+                            y: -Math.random() * 100,
+                            speed: 1 + level * 0.5,
+                            aiTracking: Math.random()
+                        });
+                    }
+                });
+            });
+
+            // Player collision
+            enemies.forEach((enemy, index) => {
+                if (player.x < enemy.x + ENEMY_SIZE && player.x + PLAYER_WIDTH > enemy.x &&
+                    player.y < enemy.y + ENEMY_SIZE && player.y + PLAYER_HEIGHT > enemy.y) {
+                    lives--;
+                    enemies.splice(index, 1);
+                    enemies.push({
+                        x: Math.random() * (canvas.width - ENEMY_SIZE),
+                        y: -Math.random() * 100,
+                        speed: 1 + level * 0.5,
+                        aiTracking: Math.random()
+                    });
+                    if (lives <= 0) endGame();
+                }
+            });
+
+            // Level progression
+            if (score >= level * 200) {
+                level++;
+                spawnEnemies(2);
+                levelEl.textContent = level;
+            }
+
+            scoreEl.textContent = score;
+            livesEl.textContent = lives;
+        }
+
+        function draw() {
+            ctx.fillStyle = 'rgba(26, 26, 26, 0.8)';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            drawPlayer();
+            drawBullets();
+            drawEnemies();
+        }
+
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function endGame() {
+            gameOver = true;
+            document.getElementById('game-info').textContent = 'Game Over!';
+        }
+
+        function resetGame() {
+            player.x = 280;
+            bullets = [];
+            enemies = [];
+            score = 0;
+            level = 1;
+            lives = 3;
+            gameOver = false;
+            scoreEl.textContent = score;
+            levelEl.textContent = level;
+            livesEl.textContent = lives;
+            document.getElementById('game-info').textContent = 'Invaders.AI';
+            spawnEnemies(8);
+        }
+
+        // Controls
+        document.addEventListener('keydown', e => keys[e.key] = true);
+        document.addEventListener('keyup', e => keys[e.key] = false);
+
+        // Touch controls
+        let touchX = null;
+        canvas.addEventListener('touchstart', e => {
+            touchX = e.touches[0].clientX;
+            e.preventDefault();
+        });
+        canvas.addEventListener('touchmove', e => {
+            if (touchX !== null) {
+                const delta = e.touches[0].clientX - touchX;
+                player.x += delta * 0.02;
+                player.x = Math.max(0, Math.min(canvas.width - PLAYER_WIDTH, player.x));
+                touchX = e.touches[0].clientX;
+            }
+            e.preventDefault();
+        });
+        canvas.addEventListener('touchend', () => touchX = null);
+
+        // Particles
+        function createParticles() {
+            const particlesContainer = document.getElementById('particles');
+            for (let i = 0; i < 50; i++) {
+                const particle = document.createElement('div');
+                particle.style.cssText = `
+                    position: absolute;
+                    width: 2px;
+                    height: 2px;
+                    background: var(--neon-blue);
+                    border-radius: 50%;
+                    left: ${Math.random() * 100}vw;
+                    animation: moveParticle ${15 + Math.random() * 10}s infinite linear;
+                    animation-delay: ${Math.random() * 5}s;
+                `;
+                particlesContainer.appendChild(particle);
+            }
+        }
+        createParticles();
+
+        // Update the game initialization
+        function initGame() {
+            // ... existing init code ...
+
+            // Add touch shooting for mobile
+            const shootOverlay = document.createElement('div');
+            shootOverlay.className = 'mobile-shoot-overlay';
+            canvas.parentElement.appendChild(shootOverlay);
+
+            shootOverlay.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                keys[' '] = true;
+            });
+
+            shootOverlay.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                keys[' '] = false;
+            });
+
+            // Improve mobile responsiveness
+            function handleResize() {
+                const container = canvas.parentElement;
+                const size = Math.min(window.innerHeight * 0.7, window.innerWidth * 0.8);
+                canvas.style.width = `${size}px`;
+                canvas.style.height = `${size}px`;
+                
+                // Adjust game elements for new size
+                const scale = size / 600;
+                PLAYER_WIDTH = Math.floor(40 * scale);
+                PLAYER_HEIGHT = Math.floor(40 * scale);
+                ENEMY_SIZE = Math.floor(30 * scale);
+                BULLET_WIDTH = Math.floor(8 * scale);
+                BULLET_HEIGHT = Math.floor(20 * scale);
+            }
+
+            window.addEventListener('resize', handleResize);
+            handleResize();
+        }
+
+        gameLoop();
+
+        // Add this event listener near the end of the script section
+        window.addEventListener('message', (event) => {
+            if (event.data.type === 'control') {
+                const { button, action } = event.data;
+                switch (button) {
+                    case 'left':
+                        keys['ArrowLeft'] = action === 'press';
+                        break;
+                    case 'right':
+                        keys['ArrowRight'] = action === 'press';
+                        break;
+                    case 'shoot':
+                        keys[' '] = action === 'press';
+                        break;
+                }
+            }
+        });
+    </script>
+</body>
+</html>

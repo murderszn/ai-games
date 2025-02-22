@@ -376,6 +376,51 @@
 
         createParticles();
         update();
+
+        // Add touch optimization
+        function optimizeForMobile() {
+            canvas.style.touchAction = 'none';
+            
+            // Adjust paddle size for mobile
+            if (window.innerWidth < 768) {
+                paddleHeight = 120;
+                player.height = paddleHeight;
+                ai.height = paddleHeight;
+            }
+
+            // Improve touch controls
+            let touchStartY = 0;
+            canvas.addEventListener('touchstart', (e) => {
+                touchStartY = e.touches[0].clientY;
+                e.preventDefault();
+            }, { passive: false });
+
+            canvas.addEventListener('touchmove', (e) => {
+                const touch = e.touches[0];
+                const deltaY = touch.clientY - touchStartY;
+                player.y = Math.max(0, Math.min(canvas.height - player.height, 
+                    player.y + deltaY * 0.5));
+                touchStartY = touch.clientY;
+                e.preventDefault();
+            }, { passive: false });
+        }
+
+        // Add performance optimization
+        let lastFrameTime = 0;
+        const targetFPS = 60;
+        const frameInterval = 1000 / targetFPS;
+
+        function gameLoop(timestamp) {
+            if (!lastFrameTime) lastFrameTime = timestamp;
+            const elapsed = timestamp - lastFrameTime;
+
+            if (elapsed > frameInterval) {
+                update();
+                draw();
+                lastFrameTime = timestamp - (elapsed % frameInterval);
+            }
+            requestAnimationFrame(gameLoop);
+        }
     </script>
 </body>
 </html> 

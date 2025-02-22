@@ -554,6 +554,107 @@
         canvas.addEventListener('touchmove', (e) => {
             e.preventDefault();
         }, { passive: false });
+
+        // Add this function to help with drawing moves
+        function drawMoves() {
+            board.forEach((value, index) => {
+                if(value) {
+                    const row = Math.floor(index / 3);
+                    const col = index % 3;
+                    if(value === 'X') drawX(row, col);
+                    else drawO(row, col);
+                }
+            });
+        }
+
+        // Update the canvas size handling
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            const size = Math.min(container.clientWidth, container.clientHeight) * 0.9;
+            
+            canvas.style.width = `${size}px`;
+            canvas.style.height = `${size}px`;
+            
+            // Keep the internal canvas size constant
+            canvas.width = 600;
+            canvas.height = 600;
+            
+            drawBoard();
+            drawMoves();
+        }
+
+        // Add resize event listener
+        window.addEventListener('resize', resizeCanvas);
+        window.addEventListener('load', resizeCanvas);
+
+        // Add these optimizations to the existing code
+        function optimizeTouchControls() {
+            canvas.style.touchAction = 'none';
+            
+            // Improve touch hit detection
+            function getTouchPosition(e) {
+                const rect = canvas.getBoundingClientRect();
+                const scaleX = canvas.width / rect.width;
+                const scaleY = canvas.height / rect.height;
+                
+                const touch = e.touches[0];
+                const x = (touch.clientX - rect.left) * scaleX;
+                const y = (touch.clientY - rect.top) * scaleY;
+                
+                return {
+                    row: Math.floor(y / (canvas.height / 3)),
+                    col: Math.floor(x / (canvas.width / 3))
+                };
+            }
+
+            // Add visual feedback for touches
+            canvas.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                if (gameOver) return;
+                
+                const pos = getTouchPosition(e);
+                if (board[pos.row * 3 + pos.col] === '') {
+                    makeMove(pos.row, pos.col);
+                }
+            }, { passive: false });
+
+            // Prevent unwanted mobile behaviors
+            canvas.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+            }, { passive: false });
+        }
+
+        // Add performance optimization
+        function optimizeRendering() {
+            let animationFrameId;
+            let needsUpdate = true;
+
+            function render() {
+                if (needsUpdate) {
+                    drawBoard();
+                    drawMoves();
+                    needsUpdate = false;
+                }
+                animationFrameId = requestAnimationFrame(render);
+            }
+
+            function markNeedsUpdate() {
+                needsUpdate = true;
+            }
+
+            render();
+
+            return {
+                stop: () => cancelAnimationFrame(animationFrameId),
+                update: markNeedsUpdate
+            };
+        }
+
+        // Initialize optimizations
+        document.addEventListener('DOMContentLoaded', () => {
+            optimizeTouchControls();
+            const renderer = optimizeRendering();
+        });
     </script>
 </body>
 </html> 
